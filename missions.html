@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Trajectory – Missions</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #ffffff;
+    color: #1a1a1a;
+    line-height: 1.55;
+  }
+  nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E8E8E8;
+  z-index: 100;
+width: 100%;
+}
+
+.nav-inner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 100px;        /* consistent spacing */
+  padding: 0 8px;
+  position: relative;
+}
+.nav-link {
+  padding: 14px 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #8A8A8A;
+  text-decoration: none;
+  letter-spacing: 0.3px;
+  position: relative;
+  line-height: 1;     /* add this */
+}
+.nav-link.active {
+  color: #1A1A1A;
+  font-weight: 700;
+}
+
+
+.underline {
+  position: absolute;
+  bottom: 0;
+  height: 2.5px;
+  background: #D72638;
+  border-radius: 2px;
+  transition: left 0.3s ease-in-out, width 0.3s ease-in-out;
+}
+
+@media (max-width: 480px) {
+  .nav-link {
+    font-size: 12px;
+    padding: 12px 4px;
+  }
+.nav-inner {
+  gap: 18px;
+}
+}
+
+  .calculator { min-height: 100vh; padding: 120px 24px 60px; max-width: 720px; margin: 0 auto; }
+  .calc-title {
+  font-size: clamp(48px, 9vw, 68px);
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  margin-bottom: 32px;
+  text-align: center;
+
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.calc-title.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+  .calc-form label { display: block; margin: 14px 0 4px; font-weight: 600; }
+  .calc-form input { width: 100%; padding: 10px 12px; font-size: 16px; border: 1px solid #c8c8c8; border-radius: 8px; margin-bottom: 12px; }
+  .calc-form .advanced { margin-top: 12px; font-size: 14px; color: #555; }
+  .calc-button { background: #d72638; color: #fff; padding: 14px 24px; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; margin-top: 20px; width: 100%; }
+  .calc-button:hover { opacity: 0.95; }
+  .results { margin-top: 32px; padding: 16px; border: 1px solid #e8e8e8; border-radius: 12px; background: #fafafa; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; }
+  .results p { margin-bottom: 12px; font-size: 15px; }
+  .results .label { font-weight: 700; color: #d72638; margin-right: 8px; }
+  @media (max-width:480px) {
+    .calc-title { font-size: clamp(38px, 11vw, 52px); }
+    .calc-form input { font-size: 15px; }
+    .calc-button { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner" id="navInner">
+   <a href="index.html" class="nav-link">Home</a>
+<a href="about.html" class="nav-link">About</a>
+<a href="missions.html" class="nav-link active">Missions</a>
+<a href="library.html" class="nav-link">Library</a>
+<a href="contact.html" class="nav-link">Contact</a>
+    <div class="underline" id="underline"></div>
+  </div>
+</nav>
+
+<section class="calculator">
+  <div class="calc-title" id="missionsTitle">Missions Calculator</div>
+
+  <form class="calc-form" id="calcForm" onsubmit="return false;">
+    <label for="m0">Initial mass (m₀) [kg]</label>
+    <input type="number" id="m0" step="any" required>
+
+    <label for="mf">Final mass (m_f) [kg]</label>
+    <input type="number" id="mf" step="any" required>
+
+    <label for="ve">Exhaust velocity (vₑ) [m/s]</label>
+    <input type="number" id="ve" step="any" required>
+
+    <label for="Fext">Constant external force (Fₑₓₜ) [N] <span class="advanced">(positive in same direction as thrust)</span></label>
+    <input type="number" id="Fext" step="any" placeholder="0">
+
+    <label for="mdot">Mass flow rate (ṁ) [kg/s] <span class="advanced">(positive magnitude of mass ejection)</span></label>
+    <input type="number" id="mdot" step="any" placeholder="leave empty or 0 if not applicable">
+
+    <button type="button" class="calc-button" onclick="calculate()">Calculate</button>
+  </form>
+
+  <div class="results" id="results" style="display:none;">
+    <div id="summary"></div>
+  </div>
+</section>
+
+<script>
+  // NAV underline (robust placement)
+  const links = document.querySelectorAll('.nav-link');
+  const underline = document.getElementById('underline');
+  function moveUnderline(el) {
+  if (!el) return;
+  underline.style.left = el.offsetLeft + "px";
+  underline.style.width = el.offsetWidth + "px";
+}
+  links.forEach(link => {
+    link.addEventListener('click', e => {
+      links.forEach(l => l.classList.remove('active'));
+      link.classList.add('active');
+      moveUnderline(link);
+    });
+  });
+  window.addEventListener('load', () => {
+  moveUnderline(document.querySelector('.nav-link.active'));
+
+  setTimeout(() => {
+    document.getElementById('missionsTitle').classList.add('visible');
+  }, 400);
+});
+  window.addEventListener('resize', () => moveUnderline(document.querySelector('.nav-link.active')));
+
+  // PHYSICS / CALCULATIONS
+  // Conventions:
+  //  - mdot is the positive magnitude of mass ejected (kg/s). dm/dt = -mdot.
+  //  - Fext is positive when acting in the same direction as the exhaust thrust.
+  // Correct integrated Δv when mass changes at constant mdot and Fext constant:
+  //   m(t) = m0 - mdot * t
+  //   m dv/dt = v_e * mdot + Fext   =>  dv/dt = (v_e*mdot + Fext) / m(t)
+  // integrate from t=0..t_burn where t_burn = (m0 - mf) / mdot:
+  //   Δv = (v_e + Fext / mdot) * ln(m0 / mf)
+  // This splits to:
+  //   Δv_propellant = v_e * ln(m0/mf)
+  //   Δv_external  = (Fext / mdot) * ln(m0/mf)   (requires mdot > 0)
+  //
+  // If mdot == 0 and m0 == mf, there is no propellant burn (Δv=0). If mdot == 0 but m0 != mf,
+  // the external-contribution cannot be computed without a burn-time; the calculator will require mdot>0
+  // to compute external contribution for a changing-mass burn.
+
+  function isFiniteNumber(v){ return typeof v === 'number' && isFinite(v); }
+
+  function calculate(){
+    const m0 = parseFloat(document.getElementById('m0').value);
+    const mf = parseFloat(document.getElementById('mf').value);
+    const ve = parseFloat(document.getElementById('ve').value);
+    const Fext = parseFloat(document.getElementById('Fext').value);
+    const mdotInput = document.getElementById('mdot').value;
+    const mdot = mdotInput === '' ? 0 : parseFloat(mdotInput);
+
+    // basic validation
+    if(!isFiniteNumber(m0) || !isFiniteNumber(mf) || !isFiniteNumber(ve)){
+      alert('Provide numeric values for m₀, m_f and vₑ.');
+      return;
+    }
+    if(!(m0 > 0 && mf > 0 && m0 > mf && ve > 0)){
+      alert('Check your inputs. Ensure m₀ > m_f > 0 and vₑ > 0.');
+      return;
+    }
+    if(mdot < 0){
+      alert('Mass flow rate (ṁ) must be non-negative. Use positive mdot for mass ejection magnitude.');
+      return;
+    }
+
+    const lnTerm = Math.log(m0 / mf); // natural log
+    const dvPropellant = ve * lnTerm;
+
+    let dvExternal = 0;
+    let burnTime = NaN;
+    let accelerationInfo = 'N/A';
+
+    if(mdot > 0){
+      burnTime = (m0 - mf) / mdot; // seconds
+      // external contribution integrated over the same burn:
+      dvExternal = ( (isFiniteNumber(Fext) ? Fext : 0) / mdot ) * lnTerm;
+      // instantaneous acceleration a(t) = (v_e * mdot + Fext) / m(t)
+      const thrustPlus = ve * mdot + (isFiniteNumber(Fext) ? Fext : 0);
+      const a0 = thrustPlus / m0;
+      const aMid = thrustPlus / ((m0 + mf) / 2);
+      const aEnd = thrustPlus / mf;
+      accelerationInfo = '';
+      accelerationInfo += 'a(t) = (vₑ · ṁ + Fₑₓₜ) / (m₀ - ṁ·t)\n';
+      accelerationInfo += 'burn time t_burn = (m₀ - m_f) / ṁ = ' + burnTime.toFixed(6) + ' s\n';
+      accelerationInfo += 'instantaneous acceleration (examples):\n';
+      accelerationInfo += '  a(0)   = ' + a0.toFixed(6) + ' m/s²  (at t = 0, mass = m₀)\n';
+      accelerationInfo += '  a(t½)  = ' + aMid.toFixed(6) + ' m/s²  (at t = t_burn/2, mass = (m₀+m_f)/2)\n';
+      accelerationInfo += '  a(t_end)= ' + aEnd.toFixed(6) + ' m/s²  (at t = t_burn, mass = m_f)\n';
+      accelerationInfo += 'Note: vₑ and Fₑₓₜ should use same direction sign convention.';
+    } else {
+      // mdot == 0
+      if(isFiniteNumber(Fext) && Fext !== 0){
+        // cannot compute external Δv without specifying a time (no mass change).
+        accelerationInfo = 'mdot = 0: no burning mass flow. External Δv requires a duration—external contribution not computed.';
+      } else {
+        accelerationInfo = 'No propellant flow and no external force; Δv = 0.';
+      }
+    }
+
+    const dvTotal = dvPropellant + dvExternal;
+
+    // Prepare output summary
+    const summaryEl = document.getElementById('summary');
+    let out = '';
+    out += 'Inputs:\n';
+    out += `  m₀ = ${m0} kg\n`;
+    out += `  m_f = ${mf} kg\n`;
+    out += `  vₑ = ${ve} m/s\n`;
+    out += `  Fₑₓₜ = ${isFiniteNumber(Fext) ? Fext : 0} N\n`;
+    out += `  ṁ = ${mdot} kg/s\n\n`;
+
+    out += 'Results:\n';
+    out += `  Δv (propellant) = vₑ · ln(m₀/m_f) = ${dvPropellant.toFixed(9)} m/s\n`;
+    if(mdot > 0){
+      out += `  Δv (external, integrated during burn) = (Fₑₓₜ / ṁ) · ln(m₀/m_f) = ${dvExternal.toFixed(9)} m/s\n`;
+    } else {
+      out += `  Δv (external) = not computed (ṁ = 0; need burn duration for external force contribution)\n`;
+    }
+    out += `  Total Δv = ${dvTotal.toFixed(9)} m/s\n\n`;
+
+    out += 'Acceleration and burn details:\n';
+    out += accelerationInfo + '\n';
+
+    out += 'Equations used (natural log):\n';
+    out += '  Δv = (vₑ + Fₑₓₜ/ṁ) · ln(m₀/m_f)\n';
+    out += '  where m(t) = m₀ - ṁ·t,  t_burn = (m₀ - m_f)/ṁ\n';
+
+    summaryEl.textContent = out;
+    document.getElementById('results').style.display = 'block';
+  }
+</script>
+
+</body>
+</html>
